@@ -25,10 +25,10 @@ struct sdeform
 
 struct spile
 {
-    std::vector<cxy> vnode;    // initial node locations
-    std::vector<cxy> vcurrent; // current node locations
+    std::vector<cxy> vnode;                 // initial node locations
+    std::vector<cxy> vcurrent;              // current node locations
     std::vector<std::pair<int, int>> vedge; // edges between nodes
-    std::vector<sdeform> vdeform;   // define deformations 
+    std::vector<sdeform> vdeform;           // define deformations
 
     void clear()
     {
@@ -36,6 +36,10 @@ struct spile
         vcurrent.clear();
         vedge.clear();
         vdeform.clear();
+    }
+    int edgeCount() const
+    {
+        return vedge.size();
     }
     /// @brief  Perform deformation
     void deform()
@@ -100,12 +104,12 @@ struct spile
                 auto n2fe = vcurrent[vedge[iedgefixed].second];
 
                 // check for intersection
-                if (cxy::isIntersection( p,
-                        n1me, n2me,
-                        n1fe,n2fe))
+                if (cxy::isIntersection(p,
+                                        n1me, n2me,
+                                        n1fe, n2fe))
                 {
                     // check that intesection NOT at a shared node
-                    if( ! ( n1me.dist2(p) < delta || n2me.dist2(p) < delta ) )
+                    if (!(n1me.dist2(p) < delta || n2me.dist2(p) < delta))
                         return true;
                 }
             }
@@ -114,14 +118,32 @@ struct spile
         return false;
     }
 
+    std::vector<double> edgeline(int ie)
+    {
+        std::vector<double> ret;
+        ret.push_back(vnode[vedge[ie].first].x);
+        ret.push_back(vnode[vedge[ie].first].y);
+        ret.push_back(vnode[vedge[ie].second].x);
+        ret.push_back(vnode[vedge[ie].second].y);
+        return ret;
+    }
+    std::vector<double> edgelineCurrent(int ie)
+    {
+        std::vector<double> ret;
+        ret.push_back(vcurrent[vedge[ie].first].x);
+        ret.push_back(vcurrent[vedge[ie].first].y);
+        ret.push_back(vcurrent[vedge[ie].second].x);
+        ret.push_back(vcurrent[vedge[ie].second].y);
+        return ret;
+    }
     void text()
     {
         std::cout << "starting position\n";
-        for( auto& n : vnode )
-            std::cout << n.x <<" "<< n.y << "\n";
+        for (auto &n : vnode)
+            std::cout << n.x << " " << n.y << "\n";
         std::cout << "final position\n";
-        for( auto& n : vcurrent )
-         std::cout << n.x <<" "<< n.y << "\n";
+        for (auto &n : vcurrent)
+            std::cout << n.x << " " << n.y << "\n";
     }
 };
 
@@ -152,18 +174,18 @@ ParseSpaceDelimited(
 }
 /**
  * @brief read input
- * 
+ *
  * @param fname input file path
- * 
+ *
  * one line per node, giving its initial location
  * n x y
- * 
+ *
  * one line per edge connecting nodes
  * e node_index1 node_index2
- * 
+ *
  * one line per moving node
  * d node_index x_direction y_direction velocity
- * 
+ *
  * Note only one moving node implemented
  */
 void read(const std::string fname)
@@ -200,34 +222,90 @@ class cGUI : public cStarterGUI
 public:
     cGUI()
         : cStarterGUI(
-              "Starter",
-              {50, 50, 1000, 500}),
-          lb(wex::maker::make<wex::label>(fm))
+              "Deformer",
+              {50, 50, 1000, 500})
     {
-        lb.move(50, 50, 100, 30);
-        lb.text("Hello World");
+
+        fm.events().draw(
+            [&](PAINTSTRUCT &ps)
+            {
+                wex::shapes S(ps);
+                scale();
+                visual(S);
+            });
 
         show();
         run();
     }
 
 private:
-    wex::label &lb;
+    double myScale,
+        myXoff,
+        myYoff;
+
+    void scale()
+    {
+        double xmin, xmax, ymin, ymax;
+        xmax = ymax = 0;
+        xmin = ymin = INT_MAX;
+        for (auto &p : thePile.vnode)
+        {
+            if (p.x < xmin)
+                xmin = p.x;
+            if (p.y < ymin)
+                ymin = p.y;
+            if (p.x > xmax)
+                xmax = p.x;
+            if (p.y > ymax)
+                ymax = p.y;
+        }
+
+        myXoff = xmin;
+        myYoff = ymin;
+
+        double xscale = 400 / (xmax - xmin);
+        double yscale = 400 / (ymax - ymin);
+        myScale = xscale;
+        if (yscale < xscale)
+            myScale = yscale;
+    }
+    void visual(wex::shapes S)
+    {
+        for (int ie = 0; ie < thePile.edgeCount(); ie++)
+        {
+            std::vector<int> pxline;
+            for (auto &v : thePile.edgeline(ie))
+                pxline.push_back((int)myScale * (v - myXoff) + 10);
+            S.line(pxline);
+            S.circle(pxline[0], pxline[1], 5);
+            S.circle(pxline[2], pxline[3], 5);
+            pxline.clear();
+            for (auto &v : thePile.edgelineCurrent(ie))
+                pxline.push_back((int)myScale * (v - myXoff) + 10);
+            pxline[0] += 500;
+            pxline[2] += 500;
+            S.line(pxline);
+            S.circle(pxline[0], pxline[1], 5);
+            S.circle(pxline[2], pxline[3], 5);
+        }
+        S.text("Start",{50,425});
+        S.text("Finish",{600,425});
+    }
 };
 
 main()
 {
-    //cGUI theGUI;
-
     // read input
-    read( "../dat/data1.txt");
+    read("../dat/data1.txt");
 
     // repeatedly apply deformation
-    for( ; ; ) {
+    for (;;)
+    {
 
         thePile.deform();
 
-        if( thePile.isIntersection() ) {
+        if (thePile.isIntersection())
+        {
             // two edges have intersected, back up and finish
             thePile.deformReverse();
             break;
@@ -236,5 +314,8 @@ main()
 
     // display initial and final node positions
     thePile.text();
+
+    cGUI theGUI;
+
     return 0;
 }
