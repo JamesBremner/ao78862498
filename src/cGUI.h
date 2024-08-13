@@ -61,3 +61,35 @@ public:
 protected:
     wex::gui &fm;
 };
+
+class cGUI : public cStarterGUI
+{
+public:
+    cGUI()
+        : cStarterGUI(
+              "Deformer",
+              {50, 50, 1000, 500})
+    {
+
+        fm.events().draw(
+            [&](PAINTSTRUCT &ps)
+            {
+                wex::shapes S(ps);
+                scale();
+                visual(S);
+            });
+
+        show();
+        run();
+    }
+
+private:
+    double myScale,
+        myXoff,
+        myYoff;
+
+    void scale();
+
+    void visual(wex::shapes S);
+
+};

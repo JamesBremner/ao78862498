@@ -5,7 +5,7 @@
 #include <vector>
 #include <algorithm>
 #include <wex.h>
-#include "cStarterGUI.h"
+#include "cGUI.h"
 #include <cxy.h>
 
 struct sdeform
@@ -217,33 +217,7 @@ void read(const std::string fname)
     }
 }
 
-class cGUI : public cStarterGUI
-{
-public:
-    cGUI()
-        : cStarterGUI(
-              "Deformer",
-              {50, 50, 1000, 500})
-    {
-
-        fm.events().draw(
-            [&](PAINTSTRUCT &ps)
-            {
-                wex::shapes S(ps);
-                scale();
-                visual(S);
-            });
-
-        show();
-        run();
-    }
-
-private:
-    double myScale,
-        myXoff,
-        myYoff;
-
-    void scale()
+void cGUI::scale()
     {
         double xmin, xmax, ymin, ymax;
         xmax = ymax = 0;
@@ -269,7 +243,7 @@ private:
         if (yscale < xscale)
             myScale = yscale;
     }
-    void visual(wex::shapes S)
+    void cGUI::visual(wex::shapes S)
     {
         for (int ie = 0; ie < thePile.edgeCount(); ie++)
         {
@@ -291,7 +265,6 @@ private:
         S.text("Start",{50,425});
         S.text("Finish",{600,425});
     }
-};
 
 main()
 {
